@@ -1,0 +1,32 @@
+version: '2'
+
+services:
+  server:
+    container_name: ndncert-server
+    image: ndncert-server
+    networks:
+      ndn-network:
+        ipv4_address: $SERVER_IP
+  
+  client:
+    container_name: ndncert-client
+    image: ndncert-client
+    networks:
+      ndn-network:
+        ipv4_address: $CLIENT_IP
+  
+#  server-agent:
+#    build:
+#      context: https://github.com/hyperledger/aries-cloudagent-python
+#      dockerfile: ./docker/Dockerfile.run
+#    ports:
+    
+
+
+networks:
+  ndn-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: $SUBNET_IP
+          gateway: $SUBNET_GATEWAY
