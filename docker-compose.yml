@@ -14,14 +14,66 @@ services:
     networks:
       ndn-network:
         ipv4_address: $CLIENT_IP
-  
-#  server-agent:
-#    build:
-#      context: https://github.com/hyperledger/aries-cloudagent-python
-#      dockerfile: ./docker/Dockerfile.run
-#    ports:
-    
 
+  server-agent:
+    image: bcgovimages/aries-cloudagent:py36-1.16-1_0.7.4
+    container_name: server-agent
+    entrypoint: /bin/bash
+    command: ["-c",
+      "aca-py start \
+        --label server.agent
+        --admin '0.0.0.0' 8021 \
+        --admin-insecure-mode \
+        --auto-provision \
+        --debug-connections \
+        --endpoint http://${SERVER_AGENT_IP}:8022 \
+        --genesis-url $GENESIS_URL \
+        --inbound-transport http '0.0.0.0' 8022 \
+        --outbound-transport http \
+        --public-invites \
+        --seed 00000000000000000000000000000000 \
+        --wallet-key secret \
+        --wallet-name test \
+        --wallet-storage-type default \
+        --wallet-type indy
+        --log-level INFO
+      "
+    ]
+    ports:
+      - 8021-8022:8021-8022
+    networks:
+      ndn-network:
+        ipv4_address: $SERVER_AGENT_IP
+
+  client-agent:
+    image: bcgovimages/aries-cloudagent:py36-1.16-1_0.7.4
+    container_name: client-agent
+    entrypoint: /bin/bash
+    command: ["-c",
+      "aca-py start \
+        --label client.agent
+        --admin '0.0.0.0' 8031 \
+        --admin-insecure-mode \
+        --auto-provision \
+        --debug-connections \
+        --endpoint http://${CLIENT_AGENT_IP}:8032 \
+        --genesis-url http://dev.greenlight.bcovrin.vonx.io/genesis \
+        --inbound-transport http '0.0.0.0' 8032 \
+        --outbound-transport http \
+        --public-invites \
+        --seed 00000000000000000000000000000001 \
+        --wallet-key secret \
+        --wallet-name test \
+        --wallet-storage-type default \
+        --wallet-type indy
+        --log-level INFO
+      "
+    ]
+    ports:
+      - 8031-8032:8031-8032
+    networks:
+      ndn-network:
+        ipv4_address: $CLIENT_AGENT_IP
 
 networks:
   ndn-network:
