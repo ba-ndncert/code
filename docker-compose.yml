@@ -27,7 +27,7 @@ services:
         --auto-provision \
         --debug-connections \
         --endpoint http://${SERVER_AGENT_IP}:8022 \
-        --genesis-url $GENESIS_URL \
+        --genesis-url ${LEDGER_URL}/genesis \
         --inbound-transport http '0.0.0.0' 8022 \
         --outbound-transport http \
         --public-invites \
@@ -57,7 +57,7 @@ services:
         --auto-provision \
         --debug-connections \
         --endpoint http://${CLIENT_AGENT_IP}:8032 \
-        --genesis-url http://dev.greenlight.bcovrin.vonx.io/genesis \
+        --genesis-url ${LEDGER_URL}/genesis \
         --inbound-transport http '0.0.0.0' 8032 \
         --outbound-transport http \
         --public-invites \
