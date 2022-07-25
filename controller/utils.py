@@ -108,15 +108,22 @@ def prompt_init():
 
 async def prompt(*args, **kwargs):
     prompt_init()
+    allow_optional=False
+    if "allow_optional" in kwargs:
+        allow_optional = kwargs["allow_optional"]
+        del kwargs["allow_optional"]
     with patch_stdout():
         try:
             while True:
                 tmp = await prompt_toolkit.prompt(*args, async_=True, **kwargs)
-                if tmp:
+                if tmp or allow_optional:
                     break
             return tmp
         except EOFError:
             return None
+
+async def prompt_opt(*args, **kwargs):
+    return await prompt(*args, **kwargs, allow_optional=True)
 
 async def prompt_list(*args, **kwargs):
     x = await prompt(*args, **kwargs)
