@@ -3,10 +3,11 @@ import json
 import logging
 import os
 import random
+from typing import Awaitable, Dict
 
 from aiohttp import ClientSession, ClientResponse, ClientError
 
-from utils import log_msg, log_json
+from utils import log_msg, log_json, prompt, prompt_list
 
 LEDGER_URL = os.getenv("LEDGER_URL")
 
@@ -40,6 +41,10 @@ class Controller:
 
         self.ledger_url = LEDGER_URL or "http://dev.greenlight.bcovrin.vonx.io"
         self.admin_url = f"http://{self.internal_host}:{admin_port}"
+
+        self.commands = {}
+        self.register_command("register_did", self.register_did)
+        self.register_command("register_schema", self.register_schema, {"schema_name": False, "schema_attrs": True})
 
 
     async def register_did(
@@ -87,8 +92,8 @@ class Controller:
     async def register_schema(
         self,
         schema_name,
-        version,
-        schema_attrs
+        schema_attrs,
+        version="1.0"
     ):
         self.log(f"Registering schema {schema_name} ...")
         schema_body = {
@@ -230,3 +235,40 @@ class Controller:
 
     def log(self, *msg, **kwargs):
         self.handle_output(*msg, **kwargs)
+
+    async def command_prompt_loop(self):
+        while True:
+            command = await prompt(self.command_prompt_loop_text())
+            yield command
+    
+    def command_prompt_loop_text(self):
+        print("Select a command by its index or name:")
+        for i, cmd_name in enumerate(self.commands):
+            print(f"{i}: {cmd_name}")
+
+    async def execute(self, command: str):
+        if command.isdigit():
+            index = int(command)
+            if index >= len(self.commands):
+                print(f"{command} is not a valid index.")
+                return
+            command = list(self.commands)[index]
+        if not command in self.commands:
+            print(f"{command} is not a valid command.")
+            return
+        await self.commands[command]()
+
+    def register_command(self, name: str, coro: Awaitable, arg_dict: Dict[str, bool]=None):
+        if not arg_dict:
+            self.commands[name] = coro
+        else:
+            async def _f():
+                args = {}
+                for arg_name, is_list in arg_dict.items():
+                    if is_list:
+                        args[arg_name] = await prompt_list(f"Enter comma-separated values for {arg_name}: ")
+                    else:
+                        args[arg_name] = await prompt(f"Enter {arg_name}: ")
+                await coro(**args)
+            self.commands[name] = _f
+

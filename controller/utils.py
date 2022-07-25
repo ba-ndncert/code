@@ -1,9 +1,11 @@
-import imp
 import json
+from attr import has
 
 import prompt_toolkit
 from prompt_toolkit.application import run_in_terminal
+from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
 from prompt_toolkit.formatted_text import FormattedText, PygmentsTokens
+from prompt_toolkit.patch_stdout import patch_stdout
 
 import pygments
 from pygments.filter import Filter
@@ -97,3 +99,26 @@ def log_msg(*msg, color="fg:ansimagenta", **kwargs):
 
 def log_json(data, **kwargs):
     run_in_terminal(lambda: print_json(data, **kwargs))
+
+def prompt_init():
+    if hasattr(prompt_init, "_called"):
+        return
+    prompt_init._called = True
+    use_asyncio_event_loop()
+
+async def prompt(*args, **kwargs):
+    prompt_init()
+    with patch_stdout():
+        try:
+            while True:
+                tmp = await prompt_toolkit.prompt(*args, async_=True, **kwargs)
+                if tmp:
+                    break
+            return tmp
+        except EOFError:
+            return None
+
+async def prompt_list(*args, **kwargs):
+    x = await prompt(*args, **kwargs)
+    return x.replace(" ", "").split(",")
+
