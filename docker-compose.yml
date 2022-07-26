@@ -21,7 +21,7 @@ services:
     entrypoint: /bin/bash
     command: ["-c",
       "aca-py start \
-        --label server.agent
+        --label server.agent \
         --admin '0.0.0.0' 8021 \
         --admin-insecure-mode \
         --auto-provision \
@@ -35,8 +35,11 @@ services:
         --wallet-key secret \
         --wallet-name test \
         --wallet-storage-type default \
-        --wallet-type indy
-        --log-level INFO
+        --wallet-type indy \
+        --log-level INFO \
+        --auto-accept-invites \
+        --auto-accept-requests \
+        --auto-store-credential
       "
     ]
     ports:
@@ -51,7 +54,7 @@ services:
     entrypoint: /bin/bash
     command: ["-c",
       "aca-py start \
-        --label client.agent
+        --label client.agent \
         --admin '0.0.0.0' 8031 \
         --admin-insecure-mode \
         --auto-provision \
@@ -65,8 +68,11 @@ services:
         --wallet-key secret \
         --wallet-name test \
         --wallet-storage-type default \
-        --wallet-type indy
-        --log-level INFO
+        --wallet-type indy \
+        --log-level INFO \
+        --auto-accept-invites \
+        --auto-accept-requests \
+        --auto-store-credential
       "
     ]
     ports:
