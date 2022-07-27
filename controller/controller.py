@@ -7,7 +7,7 @@ from typing import Awaitable, Dict
 
 from aiohttp import ClientSession, ClientResponse, ClientError
 
-from utils import log_msg, log_json, prompt, prompt_list
+from utils import log_msg, log_json, prompt, prompt_list, prompt_opt
 
 LEDGER_URL = os.getenv("LEDGER_URL")
 
@@ -44,7 +44,8 @@ class Controller:
 
         self.commands = {}
         self.register_command("register_did", self.register_did)
-        self.register_command("register_schema", self.register_schema, {"schema_name": False, "schema_attrs": True})
+        self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+", "version": "?"})
+        self.register_command("register_cred_def",  self.register_cred_def, {"schema_id": "1", "schema_name": "1", "tag": "?"})
 
 
     async def register_did(
@@ -74,8 +75,8 @@ class Controller:
     async def register_schema_and_cred_def(
         self,
         schema_name,
-        version,
         schema_attrs,
+        version="1.0",
         tag=None
     ):
         schema_id = await self.register_schema(
@@ -258,17 +259,21 @@ class Controller:
             return
         await self.commands[command]()
 
-    def register_command(self, name: str, coro: Awaitable, arg_dict: Dict[str, bool]=None):
+    def register_command(self, name: str, coro: Awaitable, arg_dict: Dict[str, str]=None):
         if not arg_dict:
             self.commands[name] = coro
         else:
-            async def _f():
+            async def coro_with_prompt():
                 args = {}
-                for arg_name, is_list in arg_dict.items():
-                    if is_list:
+                for arg_name, arg_type in arg_dict.items():
+                    if arg_type == "1":
+                        args[arg_name] = await prompt(f"Enter {arg_name}: ")
+                    elif arg_type == "?":
+                        args[arg_name] = await prompt_opt(f"Enter {arg_name} or press <ENTER> to skip: ")
+                    elif arg_type == "+":
                         args[arg_name] = await prompt_list(f"Enter comma-separated values for {arg_name}: ")
                     else:
-                        args[arg_name] = await prompt(f"Enter {arg_name}: ")
+                        raise ValueError(f"arg_type must be in ['1', '?', '+'] but is {arg_type}")
                 await coro(**args)
-            self.commands[name] = _f
+            self.commands[name] = coro_with_prompt
 
