@@ -44,7 +44,7 @@ class Controller:
 
         self.commands = {}
         self.register_command("register_did", self.register_did)
-        self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+"})
+        self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+", "version": "?"})
         self.register_command("register_cred_def",  self.register_cred_def, {"schema_id": "1", "schema_name": "1", "tag": "?"})
 
 
@@ -75,8 +75,8 @@ class Controller:
     async def register_schema_and_cred_def(
         self,
         schema_name,
-        version,
         schema_attrs,
+        version="1.0",
         tag=None
     ):
         schema_id = await self.register_schema(
