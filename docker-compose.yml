@@ -22,18 +22,18 @@ services:
     command: ["-c",
       "aca-py start \
         --label server.agent \
-        --admin '0.0.0.0' 8021 \
+        --admin '0.0.0.0' ${SERVER_AGENT_ADMIN_PORT} \
         --admin-insecure-mode \
         --auto-provision \
         --debug-connections \
-        --endpoint http://${SERVER_AGENT_IP}:8022 \
+        --endpoint http://${SERVER_AGENT_IP}:${SERVER_AGENT_INBOUND_PORT} \
         --genesis-url ${LEDGER_URL}/genesis \
-        --inbound-transport http '0.0.0.0' 8022 \
+        --inbound-transport http '0.0.0.0' ${SERVER_AGENT_INBOUND_PORT} \
         --outbound-transport http \
         --public-invites \
         --seed 00000000000000000000000000000000 \
         --wallet-key secret \
-        --wallet-name test \
+        --wallet-name server-wallet \
         --wallet-storage-type default \
         --wallet-type indy \
         --log-level INFO \
@@ -43,7 +43,8 @@ services:
       "
     ]
     ports:
-      - 8021-8022:8021-8022
+      - "${SERVER_AGENT_ADMIN_PORT}:{SERVER_AGENT_ADMIN_PORT}"
+      - "${SERVER_AGENT_INBOUND_PORT}:${SERVER_AGENT_INBOUND_PORT}"
     networks:
       ndn-network:
         ipv4_address: $SERVER_AGENT_IP
@@ -55,18 +56,18 @@ services:
     command: ["-c",
       "aca-py start \
         --label client.agent \
-        --admin '0.0.0.0' 8031 \
+        --admin '0.0.0.0' ${CLIENT_AGENT_ADMIN_PORT} \
         --admin-insecure-mode \
         --auto-provision \
         --debug-connections \
-        --endpoint http://${CLIENT_AGENT_IP}:8032 \
+        --endpoint http://${CLIENT_AGENT_IP}:${CLIENT_AGENT_INBOUND_PORT} \
         --genesis-url ${LEDGER_URL}/genesis \
-        --inbound-transport http '0.0.0.0' 8032 \
+        --inbound-transport http '0.0.0.0' ${CLIENT_AGENT_INBOUND_PORT} \
         --outbound-transport http \
         --public-invites \
         --seed 00000000000000000000000000000001 \
         --wallet-key secret \
-        --wallet-name test \
+        --wallet-name client-wallet \
         --wallet-storage-type default \
         --wallet-type indy \
         --log-level INFO \
@@ -76,7 +77,8 @@ services:
       "
     ]
     ports:
-      - 8031-8032:8031-8032
+      - "${CLIENT_AGENT_ADMIN_PORT}:${CLIENT_AGENT_ADMIN_PORT}"
+      - "${CLIENT_AGENT_INBOUND_PORT}:${CLIENT_AGENT_INBOUND_PORT}"
     networks:
       ndn-network:
         ipv4_address: $CLIENT_AGENT_IP
