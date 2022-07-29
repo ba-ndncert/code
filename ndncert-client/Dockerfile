@@ -13,3 +13,5 @@ COPY trust-schema.conf .
 
 COPY setup.sh .
 RUN chmod +x ./setup.sh
+
+COPY client.conf .

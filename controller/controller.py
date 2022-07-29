@@ -44,7 +44,7 @@ class Controller:
 
         self.commands = {}
         self.register_command("register_did", self.register_did)
-        self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+", "version": "?"})
+        self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+"})
         self.register_command("register_cred_def",  self.register_cred_def, {"schema_id": "1", "schema_name": "1", "tag": "?"})
 
 
@@ -105,6 +105,8 @@ class Controller:
         schema_response = await self.admin_POST("/schemas", schema_body)
         log_json(json.dumps(schema_response), label="Schema:")
         await asyncio.sleep(2.0)
+        print(schema_response)
+        print(schema_response.keys())
         if "schema_id" in schema_response:
             # schema is created directly
             schema_id = schema_response["schema_id"]
@@ -216,6 +218,7 @@ class Controller:
                 path,
                 repr_json(response),
             )
+            print(response)
             return response
         except ClientError as e:
             self.log(f"Error during POST {path}: {str(e)}")

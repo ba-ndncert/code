@@ -43,7 +43,7 @@ services:
       "
     ]
     ports:
-      - "${SERVER_AGENT_ADMIN_PORT}:{SERVER_AGENT_ADMIN_PORT}"
+      - "${SERVER_AGENT_ADMIN_PORT}:${SERVER_AGENT_ADMIN_PORT}"
       - "${SERVER_AGENT_INBOUND_PORT}:${SERVER_AGENT_INBOUND_PORT}"
     networks:
       ndn-network:
