@@ -26,13 +26,13 @@ class Controller:
     def __init__(
         self,
         ident: str,
-        internal_host: str,
-        admin_port: int,
-        role: str=None
+        endpoint: str,
+        role: str=None,
+        did: str=None
     ):
         self.ident = ident
-        self.internal_host = internal_host
         self.role = role
+        self.did = did
 
         self.client_session: ClientSession = ClientSession()
 
@@ -40,12 +40,35 @@ class Controller:
         self.seed = ("00000000000000000000000000000000" + rand_name)[-32:]
 
         self.ledger_url = LEDGER_URL or "http://dev.greenlight.bcovrin.vonx.io"
-        self.admin_url = f"http://{self.internal_host}:{admin_port}"
+        self.admin_url = endpoint
 
         self.commands = {}
         self.register_command("register_did", self.register_did)
         self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+"})
         self.register_command("register_cred_def",  self.register_cred_def, {"schema_id": "1", "schema_name": "1", "tag": "?"})
+        self.register_command(
+            "offer_credential", 
+            self.offer_credential, 
+            {
+                "connection_id": "1",
+                "schema_id": "1",
+                "cred_def_id": "1",
+                "attributes_json": "1",
+                "schema_issuer_did": "?"
+            }
+        )
+        
+    async def get_did(
+        self
+    ):
+        if self.did:
+            return self.did
+        else:
+            self.log("Getting public DID ...")
+            resp = await self.admin_GET("/wallet/did/public")
+            self.did = resp["result"]["did"]
+            self.log(f"Obtained DID: {self.did}")
+            return self.did
 
 
     async def register_did(
@@ -161,6 +184,41 @@ class Controller:
             cred_def_id = cred_def_response["credential_definition_ids"][0]
         log_msg("Cred def ID:", cred_def_id)
         return schema_id, cred_def_id
+    
+    async def offer_credential(
+        self, connection_id, schema_id, cred_def_id, attributes_json, schema_issuer_did=None
+    ):
+        self.log("Issuing credential ...")
+        issuer_did = await self.get_did()
+        schema_id_comps = schema_id.split(":")
+        schema_name = schema_id_comps[-2]
+        schema_version = schema_id_comps[-1]
+        schema_issuer_did = issuer_did if not schema_issuer_did else schema_issuer_did
+        self.log(f"schema_name: {schema_name}")
+        self.log(f"schema_version: {schema_version}")
+        self.log(f"schema_issuer_did: {schema_issuer_did}")
+        issue_cred_body = {
+            "auto_remove": True,
+            "comment": "string",
+            "connection_id": connection_id,
+            "credential_preview": {
+                "@type": "issue-credential/2.0/credential-preview",
+                "attributes": json.loads(attributes_json)
+            },
+            "filter": {
+                "indy": {
+                    "cred_def_id": cred_def_id,
+                    "issuer_did": issuer_did,
+                    "schema_id": schema_id,
+                    "schema_issuer_did": schema_issuer_did,
+                    "schema_name": schema_name,
+                    "schema_version": schema_version
+                }
+            }
+        }
+        resp = await self.admin_POST("/issue-credential-2.0/send-offer", data=issue_cred_body)
+        self.log(f"Offered credential with \ncred_ex_id: {resp['cred_ex_id']}\nthread_id: {resp['thread_id']}")
+        
 
     async def admin_request(
         self, method, path, data=None, text=False, params=None, headers=None
@@ -218,7 +276,6 @@ class Controller:
                 path,
                 repr_json(response),
             )
-            print(response)
             return response
         except ClientError as e:
             self.log(f"Error during POST {path}: {str(e)}")

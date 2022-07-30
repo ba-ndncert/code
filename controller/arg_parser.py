@@ -11,4 +11,8 @@ def arg_parser():
         "command",
         nargs="?"
     )
+    parser.add_argument(
+        "--endpoint",
+        default = "http://localhost:8121"
+    )
     return parser

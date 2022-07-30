@@ -10,8 +10,7 @@ from arg_parser import arg_parser
 async def main(args):
     controller = Controller(
         ident="ServerController",
-        internal_host="localhost",
-        admin_port=8021
+        endpoint="http://localhost:8121"
     )
 
     try:
