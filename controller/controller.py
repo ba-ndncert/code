@@ -1,13 +1,17 @@
+#!/usr/bin/env python3.9
+
 import asyncio
 import json
 import logging
 import os
-import random
+import sys
 from typing import Awaitable, Dict, List
 
 from aiohttp import ClientSession, ClientResponse, ClientError
 
 from utils import log_msg, log_json, prompt, prompt_list, prompt_opt, log
+
+from arg_parser import arg_parser
 
 LEDGER_URL = os.getenv("LEDGER_URL")
 
@@ -37,7 +41,7 @@ class Controller:
         self.ident = ident
         self.did = None
 
-        self.client_session: ClientSession = ClientSession()
+        self.client_session = None
 
         self.ledger_url = LEDGER_URL or "http://dev.greenlight.bcovrin.vonx.io"
         self.admin_url = endpoint
@@ -454,4 +458,39 @@ class Controller:
                         raise ValueError(f"arg_type must be in ['1', '?', '+'] but is {arg_type}")
                 await coro(**args)
             self.commands[name] = coro_with_prompt
+            
+    async def main(self, args):        
+        self.client_session = ClientSession()
+
+        try:
+            if args.interactive:
+                async for command in self.command_prompt_loop():
+                    await self.execute(command)
+            else:
+                command = args.command
+                if not command:
+                    print("No command specified.")
+                else:
+                    await self.execute(command)
+        finally:
+            terminated = await self.terminate()
+
+        await asyncio.sleep(1.0)
+
+        if not terminated:
+            os._exit(1)
+
+if __name__ == "__main__":
+    controller = Controller(
+        ident="ServerController",
+        endpoint="http://localhost:8121"
+    )
+    
+    parser = arg_parser()
+    args = parser.parse_args()
+    
+    try:
+        asyncio.run(controller.main(args))
+    except KeyboardInterrupt:
+        sys.exit()
 
