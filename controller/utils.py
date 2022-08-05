@@ -1,5 +1,4 @@
 import json
-from attr import has
 
 import prompt_toolkit
 from prompt_toolkit.application import run_in_terminal
@@ -128,4 +127,17 @@ async def prompt_opt(*args, **kwargs):
 async def prompt_list(*args, **kwargs):
     x = await prompt(*args, **kwargs)
     return x.replace(" ", "").split(",")
+
+def handle_output(*output, source: str = None, **kwargs):
+        end = "" if source else "\n"
+        if source == "stderr":
+            color = "fg:ansired"
+        elif not source:
+            color = "fg:ansiblue"
+        else:
+            color = None
+        log_msg(*output, color=color, prefix="", end=end, **kwargs)
+
+def log(*msg, **kwargs):
+    handle_output(*msg, **kwargs)
 
