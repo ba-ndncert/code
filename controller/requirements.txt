@@ -1,3 +1,0 @@
-aiohttp~=3.8.1
-prompt_toolkit~=2.0.9
-pygments~=2.10

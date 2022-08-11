@@ -10,7 +10,7 @@ from aiohttp import ClientSession, ClientResponse, ClientError
 
 from utils import log_msg, log_json, prompt, prompt_list, prompt_opt, log
 
-from arg_parser import arg_parser
+from controller_pkg.arg_parser import controller_parser
 
 EVENT_LOGGER = logging.getLogger("event")
 
@@ -534,7 +534,7 @@ if __name__ == "__main__":
         endpoint="http://localhost:8121"
     )
     
-    parser = arg_parser()
+    parser = controller_parser()
     args = parser.parse_args()
     
     try:

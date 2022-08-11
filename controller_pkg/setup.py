@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from controller_pkg.arg_parser import setup_parser
 from controller_pkg.controller import Controller
 from controller_pkg.utils import log
 
@@ -124,26 +125,7 @@ async def main(args):
     
 
 if __name__ == "__main__":  
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--register_did",
-        type=bool,
-        default=False 
-    )
-    parser.add_argument(
-        "--env_path",
-        # assume that .env file is one folder up
-        default="./../.env"
-    )
-    parser.add_argument(
-        "--schema_name",
-        default="my_schema"
-    )
-    parser.add_argument(
-        "--schema_attrs",
-        default="name,age",
-        type=str
-    )
+    parser = setup_parser()
     args = parser.parse_args()
     
     try:

@@ -31,13 +31,12 @@ services:
         --inbound-transport http '0.0.0.0' ${SERVER_AGENT_INBOUND_PORT} \
         --outbound-transport http \
         --public-invites \
-        --seed 00000000000000000000000000000000 \
-        --wallet-key secret \
-        --wallet-name server-wallet \
+        --seed ${SERVER_SEED}
+        --wallet-key abc \
+        --wallet-name swallet \
         --wallet-storage-type default \
         --wallet-type indy \
         --log-level INFO \
-        --auto-accept-invites \
         --auto-accept-requests \
         --auto-store-credential
       "
@@ -65,13 +64,12 @@ services:
         --inbound-transport http '0.0.0.0' ${CLIENT_AGENT_INBOUND_PORT} \
         --outbound-transport http \
         --public-invites \
-        --seed 00000000000000000000000000000001 \
-        --wallet-key secret \
-        --wallet-name client-wallet \
+        --seed ${CLIENT_SEED} \
+        --wallet-key abc \
+        --wallet-name cwallet \
         --wallet-storage-type default \
         --wallet-type indy \
         --log-level INFO \
-        --auto-accept-invites \
         --auto-accept-requests \
         --auto-store-credential
       "
