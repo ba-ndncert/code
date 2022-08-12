@@ -20,11 +20,6 @@ def controller_parser():
 def setup_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--register_did",
-        type=bool,
-        default=False 
-    )
-    parser.add_argument(
         "--env_path",
         # assume that .env file is one folder up
         default="./../.env"

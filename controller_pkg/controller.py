@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import sys
-from typing import Awaitable, Dict, List
+from typing import Awaitable, Dict, List, Tuple
 
 from aiohttp import ClientSession, ClientResponse, ClientError
 
@@ -27,14 +27,15 @@ class Controller:
     def __init__(
         self,
         ident: str,
-        endpoint: str,
+        admin_url: str,
         ledger_url: str="http://dev.greenlight.bcovrin.vonx.io"
     ):
-        """ Initializes a controller for an Aries agent. The ledger url is read from the environment variable LEDGER_URL.
+        """ Initializes a controller for an Aries agent.
 
         Args:
             ident (str): The identity (name) of the controller
             endpoint (str): The endpoint under which the agent's admin page can be reached
+            ledger_url (str): The endpoint under which the ledger can be reached
         """
         self.ident = ident
         self.did = None
@@ -42,7 +43,7 @@ class Controller:
         self.client_session = None
 
         self.ledger_url = ledger_url
-        self.admin_url = endpoint
+        self.admin_url = admin_url
         
         self.log(f"LEDGER_URL: {self.ledger_url}; ADMIN URL: {self.admin_url}")
 
@@ -68,11 +69,11 @@ class Controller:
         
     async def get_did(
         self
-    ):
+    ) -> str:
         """ Get the DID that the agent registered on the ledger. If no DID is registered yet, fetch_did() is called.
 
         Returns:
-            did (str): The DID the agent registered on the ledger 
+            str: The DID the agent registered on the ledger 
         """
         if not self.did:
             await self.fetch_did()
@@ -92,9 +93,12 @@ class Controller:
 
     async def register_did(
         self,
-        role: str=None
+        is_endorser: bool=True
     ):  
         """ Register a DID for the agent on the ledger. Note that each time this method is invoked a new DID is assigned as public DID to the agent.
+        
+        Args:
+            is_endorser (bool): If True, DID is registered with role "ENDORSER", else with role "". 
 
         Raises:
             Exception: DID could not be registered
@@ -103,7 +107,7 @@ class Controller:
         
         data = {
             "alias": self.ident,
-            "role": role or "ENDORSER"
+            "role": "ENDORSER" if is_endorser else ""
         }
         
         resp = await self.admin_POST("/wallet/did/create")
@@ -129,33 +133,72 @@ class Controller:
         
     async def has_connection(
         self,
-        params
-    ):
+        params: Dict
+    ) -> bool:
+        """ Send GET request to admin's /connections endpoint and returns True if there is at least one connection complying with
+        the supplied parameters.
+
+        Args:
+            params (Dict): Available keys: alias, connection_protocol, invitation_key, my_did, state, their_did, their_public_did,
+                their_role
+
+        Returns:
+            bool: True if at least one connection complies with the supplied parameters
+        """
         resp =  await self.admin_GET("/connections", params=params)
         return len(resp["results"]) > 0
         
     async def create_invitation(
         self
-    ): 
+    ) -> ClientResponse: 
+        """ Create an invitation.
+
+        Returns:
+            ClientResponse: HTTP response object from /connections/create-invitation
+        """
         self.log("Create invitation")
         return await self.admin_POST("/connections/create-invitation")
     
     async def receive_invitation(
-        self, invitation
-    ):
+        self, invitation: Dict
+    ) -> ClientResponse:
+        """ Receive an invitation.
+
+        Args:
+            invitation (Dict): An invitation object as in the "invitation" field of the response to create_invitation()
+
+        Returns:
+            ClientResponse: HTTP response object from /connections/receive-invitation
+        """
         self.log("Receive invitation")
         return await self.admin_POST("/connections/receive-invitation", data=invitation)
         
-    async def request_invitation(
-        self, connection_id
-    ):
-        self.log("Request invitation")
+    async def request_connection(
+        self, connection_id: str
+    ) -> ClientResponse:
+        """ Request a connection from an inviter
+
+        Args:
+            connection_id (str): Identifier that invitee associates with the prospective connection
+
+        Returns:
+            ClientResponse: HTTP response object from /connections/{conn_id}/accept-invitation
+        """
+        self.log("Send connection request")
         return await self.admin_POST(f"/connections/{connection_id}/accept-invitation")
     
-    async def accept_invitation(
-        self, their_did
+    async def accept_connection_request(
+        self, their_did: str
     ):
-        self.log("Accept invitation")
+        """ Accept a connection request from an invitee
+
+        Args:
+            their_did (str): The DID that the invitee associates with the connection
+
+        Returns:
+            ClientResponse: HTTP response object from /connections/{conn_id}/accept-request
+        """
+        self.log("Accept connection request")
         resp = await self.admin_GET("/connections", params={"their_did": their_did})
         connection_id = resp["results"][0]["connection_id"]
         return await self.admin_POST(f"/connections/{connection_id}/accept-request")
@@ -166,7 +209,7 @@ class Controller:
         schema_attrs,
         version="1.0",
         tag=None
-    ):
+    ) -> Tuple[str, str]:
         """ Register schema and associated credential definition on the ledger.
 
         Args:
@@ -176,7 +219,7 @@ class Controller:
             tag (str, optional): Credential definition tag. Defaults to None.
             
         Returns:
-            schema_id, credential_definition_id (str, str): Schema identifier and credential definition identifier
+            Tuple[str, str]: Schema identifier and credential definition identifier
         """
         schema_id = await self.register_schema(
             schema_name=schema_name,
@@ -194,7 +237,7 @@ class Controller:
         schema_name: str,
         schema_attrs: List[str],
         version="1.0"
-    ):
+    ) -> str:
         """ Register schema on the ledger.
 
         Args:
@@ -203,7 +246,7 @@ class Controller:
             version (str, optional): Schema version. Defaults to "1.0".
 
         Returns:
-            schema_id (str): Schema identifier
+            str: Schema identifier
         """
         self.log(f"Registering schema {schema_name} ...")
         created_schemas = await self.admin_GET("/schemas/created", params={"schema_name": schema_name})
@@ -227,7 +270,7 @@ class Controller:
         schema_id: str,
         schema_name: str,
         tag: str = None
-    ):
+    ) -> Tuple[str, str]:
         """ Register credential definition on the ledger.
 
         Args:
@@ -236,7 +279,7 @@ class Controller:
             tag (str, optional): Credential defintion tag. Defaults to None.
 
         Returns:
-            schema_id, credential_definition_id (str, str): Schema identifier and credential definition identifier
+            Tuple[str, str]: Schema identifier and credential definition identifier
         """
         cred_def_tag = tag if tag else (self.ident + "." + schema_name).replace(" ", "_")
         self.log(f"Registering credential definition {cred_def_tag} ...")
@@ -252,13 +295,41 @@ class Controller:
         log_msg("Cred def ID:", cred_def_id)
         return schema_id, cred_def_id
     
-    async def get_credential_exchange_records(self, params):
+    async def get_credential_exchange_records(self, params: Dict) -> ClientResponse:
+        """ Send GET request to /issue-credential-2.0/records endpoint.
+
+        Args:
+            params (Dict): Parameters for filtering records. Available keys: connection_id, role, state, thread_id
+
+        Returns:
+            ClientResponse: HTTP response object from /issue-credential-2.0/records
+        """
         return await self.admin_GET("/issue-credential-2.0/records", params=params)
     
-    async def has_credential_exchange_record(self, params):
+    async def has_credential_exchange_record(self, params: Dict) -> bool:
+        """ Check if there is a credential exchange record complying with the supplied parameters.
+
+        Args:
+            params (Dict): Parameters for filtering records. Available keys: connection_id, role, state, thread_id
+
+        Returns:
+            bool: True if at least one credential exchange record complies with the supplied parameters
+        """
         return len((await self.get_credential_exchange_records(params))["results"]) > 0
     
-    async def build_cred_preview_attributes_json(self, schema_id, default="default"):
+    async def build_cred_preview_attributes_json(self, schema_id: str, default="default") -> Dict:
+        """ Build the credential preview object for a schema id
+
+        Args:
+            schema_id (str): Schema identifier
+            default (str, optional): Attribute value which is identical for all attribute names. Defaults to "default".
+
+        Raises:
+            RuntimeError: Leder has no schema with supplied schema_id
+
+        Returns:
+            Dict: Credential preview object
+        """
         resp = await self.admin_GET(f"/schemas/{schema_id}")
         if not len(resp["schema"]):
             raise RuntimeError(f"Ledger has no schema with id: {schema_id}")
@@ -272,15 +343,18 @@ class Controller:
         cred_def_id: str, 
         attributes_json, 
         schema_issuer_did: str = None
-    ):
-        """ Offer a credential to a holder using the issue-credential-2.0 protocol
+    ) -> Tuple[str, str]:
+        """ Offer a credential to a holder
 
         Args:
             connection_id (str): Connection identifier of the connection to the holder
             schema_id (str): Schema identifier of the offered credential
             cred_def_id (str): Credential definition identifier of the offered credential
-            attributes_json (str): attributes field of the credential_preview field of the request body in JSON format 
+            attributes_json (str, Dict): attributes field of the credential_preview field of the request body in JSON format (string or Dictionary) 
             schema_issuer_did (str, optional): DID of the schema issuer. Defaults to None. Then, the issuer DID is expected to be equal to the schema issuer DID
+            
+        Returns:
+            Tuple[str, str]: Credential exchange identifier ("cred_ex_id") and thread identifier ("thread_id")
         """
         self.log("Offering credential ...")
         issuer_did = await self.get_did()
@@ -311,7 +385,18 @@ class Controller:
         self.log(f"Offered credential with \n\tcred_ex_id: {resp['cred_ex_id']}\n\tthread_id: {resp['thread_id']}")
         return resp["cred_ex_id"], resp["thread_id"]
     
-    async def request_credential(self, thread_id):
+    async def request_credential(self, thread_id: str) -> ClientResponse:
+        """ Request a credential from an issuer
+
+        Args:
+            thread_id (str): Thread identifier of credential exchange
+
+        Raises:
+            RuntimeError: No credential exchange record with supplied thread_id in offer-received state
+
+        Returns:
+            ClientResponse: HTTP response object from /issue-credential-2.0/records/{cred_ex_id}/send-request
+        """
         self.log("Requesting credential ...")
         params = {
             "thread_id": thread_id,
@@ -322,7 +407,18 @@ class Controller:
         cred_ex_id = (await self.get_credential_exchange_records(params))["results"][0]["cred_ex_record"]["cred_ex_id"]
         return await self.admin_POST(f"/issue-credential-2.0/records/{cred_ex_id}/send-request")
     
-    async def issue_credential(self, thread_id):
+    async def issue_credential(self, thread_id: str) -> ClientResponse:
+        """ Issue credential to holder
+
+        Args:
+            thread_id (str): Thread identifier of credential exchange
+
+        Raises:
+            RuntimeError: No credential exchange record with supplied thread_id in offer-received state
+
+        Returns:
+            ClientResponse: HTTP response object from /issue-credential-2.0/records/{cred_ex_id}/issue
+        """
         self.log("Issuing credential ...")
         params = {
             "thread_id": thread_id,
