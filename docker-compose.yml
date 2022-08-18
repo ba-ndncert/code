@@ -1,14 +1,14 @@
 version: '2'
 
 services:
-  server:
+  ndncert-server:
     container_name: ndncert-server
     image: ndncert-server
     networks:
       ndn-network:
         ipv4_address: $SERVER_IP
   
-  client:
+  ndncert-client:
     container_name: ndncert-client
     image: ndncert-client
     networks:
