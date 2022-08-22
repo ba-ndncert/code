@@ -2,9 +2,6 @@ FROM ndncert
 
 USER root
 
-ENV SERVER_IP=10.0.0.2
-ENV SERVER_NDN_PATH=/example
-
 COPY consumer.cpp .
 
 RUN g++ consumer.cpp -o consumer -lndn-cxx -lboost_system
