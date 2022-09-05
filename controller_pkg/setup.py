@@ -111,17 +111,22 @@ async def main(args):
     # load environment variables from .env file
     load_dotenv(args.env_path)
     
+    required_env = ["SERVER_AGENT_IP", "SERVER_AGENT_ADMIN_PORT", "LEDGER_URL"]
+    for env in required_env:
+        if not os.getenv(env):
+            raise RuntimeError(f"Environment variable {env} is missing.")
+    
     server_controller = Controller(
         ident = "ServerController",
         admin_url = f"http://{os.getenv('SERVER_AGENT_IP')}:{os.getenv('SERVER_AGENT_ADMIN_PORT')}",
-        ledger_url=os.getenv("LEDGER_URL") or "http://dev.greenlight.bcovrin.vonx.io"
+        ledger_url=os.getenv("LEDGER_URL")
     )
     server_controller.client_session = ClientSession()
             
     client_controller = Controller(
         ident = "ClientController",
         admin_url = f"http://{os.getenv('CLIENT_AGENT_IP')}:{os.getenv('CLIENT_AGENT_ADMIN_PORT')}",
-        ledger_url=os.getenv("LEDGER_URL") or "http://dev.greenlight.bcovrin.vonx.io"
+        ledger_url=os.getenv("LEDGER_URL")
     )
     client_controller.client_session = ClientSession()
     

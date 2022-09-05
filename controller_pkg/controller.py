@@ -1,14 +1,18 @@
 #!/usr/bin/env python3.9
 
+import ast
 import asyncio
 import json
 import logging
+import os
 import sys
-from typing import Awaitable, Dict, List, Tuple
 
 from aiohttp import ClientSession, ClientResponse, ClientError
-
+from dotenv import load_dotenv
+from typing import Awaitable, Dict, List, Tuple
 from utils import log_msg, log_json, prompt, prompt_list, prompt_opt, log
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from controller_pkg.arg_parser import controller_parser
 
@@ -28,7 +32,8 @@ class Controller:
         self,
         ident: str,
         admin_url: str,
-        ledger_url: str="http://dev.greenlight.bcovrin.vonx.io"
+        ledger_url: str="http://dev.greenlight.bcovrin.vonx.io",
+        log_urls: bool=True
     ):
         """ Initializes a controller for an Aries agent.
 
@@ -45,12 +50,21 @@ class Controller:
         self.ledger_url = ledger_url
         self.admin_url = admin_url
         
-        self.log(f"LEDGER_URL: {self.ledger_url}; ADMIN URL: {self.admin_url}")
+        if log_urls:
+            self.log(f"LEDGER_URL: {self.ledger_url}; ADMIN URL: {self.admin_url}")
 
         self.commands = {}
+        # Register command for DID registration
         self.register_command("register_did", self.register_did)
+        # Register commands for schema and credential definition registration
         self.register_command("register_schema", self.register_schema, {"schema_name": "1", "schema_attrs": "+"})
         self.register_command("register_cred_def",  self.register_cred_def, {"schema_id": "1", "schema_name": "1", "tag": "?"})
+        # Register commands for connection establishment
+        self.register_command("create_invitation", self.create_invitation)
+        self.register_command("receive_invitation", self.receive_invitation_str, {"invitation": "1"})
+        self.register_command("request_connection", self.request_connection, {"connection_id": "1"})
+        self.register_command("accept_connection_request", self.accept_connection_request, {"their_did": "1"})
+        # Register commands for credential issuance
         self.register_command(
             "offer_credential", 
             self.offer_credential, 
@@ -62,6 +76,7 @@ class Controller:
                 "schema_issuer_did": "?"
             }
         )
+        self.register_command("request_credential", self.request_credential, {"thread_id": "1"})
         self.register_command("issue_credential", self.issue_credential, {"thread_id": "1"})
         
     def log(self, msg):
@@ -149,7 +164,7 @@ class Controller:
         return len(resp["results"]) > 0
         
     async def create_invitation(
-        self
+        self, print_invitation=True
     ) -> ClientResponse: 
         """ Create an invitation.
 
@@ -157,7 +172,10 @@ class Controller:
             ClientResponse: HTTP response object from /connections/create-invitation
         """
         self.log("Create invitation")
-        return await self.admin_POST("/connections/create-invitation")
+        invitation = await self.admin_POST("/connections/create-invitation")
+        if (print_invitation):
+            print(invitation["invitation"])
+        return invitation
     
     async def receive_invitation(
         self, invitation: Dict
@@ -165,13 +183,28 @@ class Controller:
         """ Receive an invitation.
 
         Args:
-            invitation (Dict): An invitation object as in the "invitation" field of the response to create_invitation()
+            invitation (Dict): An invitation object as in the "invitation" field of the response to self.create_invitation()
 
         Returns:
             ClientResponse: HTTP response object from /connections/receive-invitation
         """
         self.log("Receive invitation")
         return await self.admin_POST("/connections/receive-invitation", data=invitation)
+    
+    async def receive_invitation_str(
+        self, invitation: str
+    ) -> ClientResponse:
+        """ Receive an invitation.
+
+        Args:
+            invitation (str): The string representation of an invitation object as in the "invitation" field of the response to
+            self.create_invitation()
+
+        Returns:
+            ClientResponse: HTTP response object from /connections/receive-invitation
+        """
+        invitation_dict = ast.literal_eval(invitation)
+        return await self.receive_invitation(invitation_dict)
         
     async def request_connection(
         self, connection_id: str
@@ -550,6 +583,9 @@ class Controller:
         """ Prints out all available commands
         """
         print("Select a command by its index or name:")
+        self.print_command_list()
+            
+    def print_command_list(self):
         for i, cmd_name in enumerate(self.commands):
             print(f"{i}: {cmd_name}")
 
@@ -625,16 +661,30 @@ class Controller:
             sys.exit(1)
 
 if __name__ == "__main__":
-    controller = Controller(
-        ident="ServerController",
-        endpoint="http://localhost:8121"
-    )
-    
     parser = controller_parser()
     args = parser.parse_args()
     
-    try:
-        asyncio.run(controller.main(args))
-    except KeyboardInterrupt:
-        sys.exit()
+    
+    if args.list:
+        dummy_controller = Controller("", "", "", False)
+        dummy_controller.print_command_list()
+    else:
+        # load environment variables from .env file
+        load_dotenv(args.env_path)
+        
+        required_env = ["SERVER_AGENT_IP", "SERVER_AGENT_ADMIN_PORT", "LEDGER_URL"]
+        for env in required_env:
+            if not os.getenv(env):
+                raise RuntimeError(f"Environment variable {env} is missing.")
+        
+        controller = Controller(
+            ident="Controller",
+            admin_url=f"http://{os.getenv('SERVER_AGENT_IP')}:{os.getenv('SERVER_AGENT_ADMIN_PORT')}",
+            ledger_url=os.getenv("LEDGER_URL")
+        )
+        
+        try:
+            asyncio.run(controller.main(args))
+        except KeyboardInterrupt:
+            sys.exit()
 
