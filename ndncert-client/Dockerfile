@@ -1,4 +1,4 @@
-FROM ndncert
+FROM ndncert:latest
 
 USER root
 

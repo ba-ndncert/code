@@ -1,16 +1,22 @@
 version: '2'
 
-services:
+services:  
   ndncert-server:
     container_name: ndncert-server
-    image: ndncert-server
+    image: ndncert-server:latest
+    build:
+      context: ./ndncert-server
+      dockerfile: Dockerfile
     networks:
       ndn-network:
         ipv4_address: $SERVER_IP
-  
+        
   ndncert-client:
     container_name: ndncert-client
-    image: ndncert-client
+    image: ndncert-client:latest
+    build:
+      context: ./ndncert-client
+      dockerfile: Dockerfile
     networks:
       ndn-network:
         ipv4_address: $CLIENT_IP

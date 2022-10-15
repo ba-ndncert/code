@@ -1,4 +1,4 @@
-FROM nfd
+FROM nfd:latest
 
 USER root
 

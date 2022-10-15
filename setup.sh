@@ -9,11 +9,13 @@ fi
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+echo -e "${CA_PREFIX}"
+
 echo -e "${BLUE}Setup local keychain for ndncert-server${NC}"
-docker exec ndncert-server ./setup.sh
+docker exec ndncert-server /bin/bash -c "export CA_PREFIX=${CA_PREFIX} && ./setup.sh"
 
 echo -e "${BLUE}Setup NDN connection to ndncert-server in ndncert-client${NC}"
-docker exec ndncert-client ./setup.sh
+docker exec ndncert-client /bin/bash -c "export SERVER_IP=${SERVER_IP} && export CA_PREFIX=${CA_PREFIX} && ./setup.sh"
 
 echo -e "${BLUE}Create ca.conf for ndncert-server${NC}"
 docker exec ndncert-server bin/bash -c "echo '{
