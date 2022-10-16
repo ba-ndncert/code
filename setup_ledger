@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Import .env file
+if [ -f .env ]
+then
+  export $(cat .env | xargs)
+fi
+
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}Register Server DID${NC}"
+curl -i -X POST -H 'Content-Type: application/json' -d "{\"seed\": \"${SERVER_SEED}\"}" ${LEDGER_URL}/register
+echo -e "\n${BLUE}Register Client DID${NC}"
+curl -i -X POST -H 'Content-Type: application/json' -d "{\"seed\": \"${CLIENT_SEED}\"}" ${LEDGER_URL}/register
