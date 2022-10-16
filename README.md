@@ -1,4 +1,4 @@
-1. Quick start was tested on a Ubuntu 20.04.4 LTS host system.
+Installation was tested on a Ubuntu 20.04.4 LTS host system.
 1. Install Python3.9, pip and git
     ```
     sudo apt install python3.9
